@@ -163,6 +163,8 @@
     update_code();
     var Submit = $('#submit');
     var Ticket = $('#ticket');
+    var lock = false; // 锁定按钮，避免多次点击
+
 
     Ticket.click(function () {
         var yel2 = document.getElementById("ticketText");
@@ -179,11 +181,13 @@
         var code = $('#code').val();
 
         if (!!realName && !!idCard) {
+            if (lock) {
+                return;
+            }
+            lock = true;
             Submit.addClass('weui-btn_disabled');
             loading = weui.loading('查询中...');
             Ticket.hide();
-
-
             var data = {
                 province_code: provinceCode,
                 id_type_code: IDTypeCode,
@@ -198,7 +202,9 @@
                 url: '/get_ticket',
                 data: JSON.stringify(data),
                 success: function (res) {
-                    if(res.msg){weui.alert(res.msg)}
+                    if (res.msg) {
+                        weui.alert(res.msg)
+                    }
                     if (res.status === 400) {
                         update_code();
                     } else if (res.status === 200) {
@@ -206,21 +212,25 @@
                     }
 
                     if (res.status !== 400) {
-                        if (res.ticket){
+                        if (res.ticket) {
                             Ticket.show();
                             Ticket.text(res.ticket);
                             $("#ticketText").text(res.ticket)
                         }
                     }
                 },
-
+                error: function () {
+                    weui.alert("网络异常");
+                },
                 complete: function () {
+                    lock = false;
                     loading.hide();
                     Submit.removeClass('weui-btn_disabled');
                 },
             });
-
         }
+
+
         else {
             weui.alert('请输入完整信息');
 
