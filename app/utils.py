@@ -1,12 +1,7 @@
-import random
-import string
-import base64
-import pickle
-from app import redis
+import os
 
 
-def generate_random_str(N):
-    """生成随机字符串"""
-    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(N))
-
-
+def del_file(file_name):
+    ''' 删除文件 '''
+    if os.path.exists(file_name):
+        os.remove(file_name)

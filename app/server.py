@@ -5,9 +5,12 @@ import requests
 import zipfile
 import json
 from app.parse_pdf import parse_pdf
+from app.utils import del_file
 from threading import Thread
 
 img_file = 'static/yzm.gif'
+# 运行程序时，删除文件
+del_file(img_file)
 
 
 class CetTicket():
@@ -77,25 +80,27 @@ class CetTicket():
         res = self._http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data)
         msg = res.json()['Message']
         if msg[:7] == '[{"SID"':
+            # 获取考号
             msg = json.loads(msg)[0]
             sid = msg["SID"]
             ticket = self._get_report(sid)
             result = {"ticket": ticket, "status": 200}
             self.threshold = 5
 
-        elif msg == "无法查询到报名信息。":
-            result = {"msg": msg, "status": 200}
-            self.threshold = 5
-
-        else:
-            if self.code and self.threshold == 0 or msg == '验证码已超时失效，请重新输入。':
-                if os.path.exists(img_file):
-                    os.remove(img_file)
-
+        elif msg in ['验证码已超时失效，请重新输入。', '验证码错误', 'SQL语句存在风险，禁止执行！']:
+            # 验证码问题
+            if msg == 'SQL语句存在风险，禁止执行！':
+                msg = '参数有误'
+            elif self.code and self.threshold == 0 or msg == '验证码已超时失效，请重新输入。':
+                del_file(img_file)
                 self.threshold = 5
                 self.get_code()
             self.code = None
             result = {"msg": msg, "status": 400}
+        else:
+            # 其他问题
+            result = {"msg": msg, "status": 200}
+            self.threshold = 5
         return result
 
     def _get_report(self, sid):
