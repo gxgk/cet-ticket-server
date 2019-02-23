@@ -11,7 +11,7 @@ services:
     volumes:
       - .:/home
       - ./logs:/home/logs
-      - ./static:/home/static
+      - ./data_file/cet_file:/home/data_file/cet_file
     depends_on:
       - redis
       
