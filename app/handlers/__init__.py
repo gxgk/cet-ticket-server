@@ -3,6 +3,8 @@ from tornado.web import RequestHandler
 from app import cet_ticket
 
 from app.handlers.base import BaseHandler
+from app.settings import logger
+
 
 
 class Index(RequestHandler):
@@ -26,6 +28,7 @@ class GetTicket(BaseHandler):
         self.write_json(self.result)
 
     def on_finish(self):
-        if self.result and self.result.get("status") == 200 and self.result.get('ticket'):
+        if self.result.get("status") == 200 and self.result.get('ticket'):
             # 保存考号
             self.save_data(self.data['id_card'], self.result['ticket'])
+        logger.info("身份证号码：%s, %s", self.data['id_card'], str(self.result))

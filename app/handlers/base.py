@@ -9,11 +9,11 @@ from tornado.escape import json_decode
 
 
 class BaseHandler(SentryMixin, RequestHandler):
-    result = None
-    data = {}
 
     def __init__(self, application, request, **kwargs):
         super(BaseHandler, self).__init__(application, request, **kwargs)
+        self.result = {}
+        self.data = {}
         self.set_header('Content-Type', 'application/json')
         self.request.remote_ip = self.request.headers.get("X-Real-Ip") or self.request.remote_ip
 

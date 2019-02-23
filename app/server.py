@@ -59,7 +59,6 @@ class CetTicket():
             self.code = code
         data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code":44}
         result = self.get_ticket(**data)
-        print(result)
         return result
 
     def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
@@ -76,7 +75,6 @@ class CetTicket():
             "Name": real_name,
             "verificationCode": self.code
         }
-        print(data)
         res = self._http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data)
         msg = res.json()['Message']
         if msg[:7] == '[{"SID"':
@@ -101,6 +99,7 @@ class CetTicket():
             # 其他问题
             result = {"msg": msg, "status": 200}
             self.threshold = 5
+        print(result)
         return result
 
     def _get_report(self, sid):
