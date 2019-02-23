@@ -1,0 +1,237 @@
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+    <title>四六级考号查询</title>
+    <link rel="stylesheet" href="https://res.wx.qq.com/open/libs/weui/1.1.2/weui.min.css"/>
+    <script src="https://res.wx.qq.com/open/libs/weuijs/1.1.3/weui.min.js"></script>
+
+    <style>
+        .page {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0
+        }
+
+        body,
+        html {
+            height: 100%;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none
+        }
+
+        .page,
+        body {
+            background-color: #FBF9FE
+        }
+
+        .page {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch
+        }
+
+        .page__hd {
+            margin: 6% 0 10%;
+            text-align: center;
+        }
+
+        .page__title {
+            text-align: center;
+            font-size: 34px;
+            color: #3CC51F;
+            font-weight: 400;
+            margin: 0 15%
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="page">
+
+    <div class="page__hd">
+        <h1 class="page__title">四六级考号查询</h1>
+        <p class="weui-cells__title">2018年下半年CET准考号查询</p>
+    </div>
+
+    <div class="page__bd">
+
+
+        <div class="weui-cells weui-cells_form">
+
+            <div class="weui-cell weui-cell_select weui-cell_select-after">
+                <div class="weui-cell__hd">
+                    <label for="" class="weui-label">省份</label>
+                </div>
+                <div class="weui-cell__bd">
+                    <select class="weui-select" id="provinceCode">
+                        <option value="44">广东省</option>
+                        <option value="11">北京市</option>
+                        <option value="12">天津市</option>
+                        <option value="13">河北省</option>
+                        <option value="22">吉林省</option>
+                        <option value="31">上海市</option>
+                        <option value="34">安徽省</option>
+                        <option value="35">福建省</option>
+                        <option value="37">山东省</option>
+                        <option value="41">河南省</option>
+                        <option value="42">湖北省</option>
+                        <option value="45">广西壮族自治区</option>
+                        <option value="46">海南省</option>
+                        <option value="50">重庆市</option>
+                        <option value="51">四川省</option>
+                        <option value="53">云南省</option>
+                        <option value="62">甘肃省</option>
+                        <option value="63">青海省</option>
+                        <option value="82">澳门</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="weui-cell weui-cell_select weui-cell_select-after">
+                <div class="weui-cell__hd">
+                    <label for="" class="weui-label">证件类型</label>
+                </div>
+                <div class="weui-cell__bd">
+                    <select class="weui-select" id="IDTypeCode">
+                        <option value="1">中华人民共和国居民身份证</option>
+                        <option value="2">台湾居民往来大陆通行证</option>
+                        <option value="3">港澳居民来往内地通行证</option>
+                        <option value="4">护照</option>
+                        <option value="5">香港身份证</option>
+                        <option value="6">澳门身份证</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">姓名</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" id="realName" placeholder="请输入姓名"/>
+                </div>
+            </div>
+
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">身份证</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" id="idCard" placeholder="请输入身份证号"/>
+                </div>
+            </div>
+
+            {% if not code %}
+            <div class="weui-cell weui-cell_vcode" id="codeDiv">
+                <div class="weui-cell__hd"><label class="weui-label">验证码</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" id="code" placeholder="输入验证码"/>
+                </div>
+                <div class="weui-cell__ft">
+                    <img class="weui-vcode-img" src="/static/yzm.gif"/>
+                </div>
+            </div>
+            {% end %}
+
+        </div>
+
+        <div class="weui-btn-area">
+            <a class="weui-btn weui-btn_primary" href="javascript:" id="ticket" style="display: none;">ticket</a>
+        </div>
+
+        <div class="weui-btn-area">
+            <a class="weui-btn weui-btn_primary" href="javascript:" id="submit">确定</a>
+        </div>
+
+    </div>
+</div>
+
+<textarea cols="0" rows="0" id="ticketText">用户定义的代码区域</textarea>
+
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+    function update_code() {
+        $('#codeDiv').show();
+        img_url = "/static/yzm.gif?v=" + (new Date()).getTime();
+        $(".weui-vcode-img").attr("src", img_url);
+    }
+
+    update_code();
+    var Submit = $('#submit');
+    var Ticket = $('#ticket');
+
+    Ticket.click(function () {
+        var yel2 = document.getElementById("ticketText");
+        yel2.select(); // 选择对象
+        document.execCommand("Copy"); // 执行浏览器复制命令
+        weui.toast('已复制到剪切版', 1000);
+    });
+
+    Submit.click(function () {
+        var provinceCode = $('#provinceCode').val();
+        var IDTypeCode = $('#IDTypeCode').val();
+        var realName = $('#realName').val().replace(/\s+/g, '');
+        var idCard = $('#idCard').val().replace(/\s+/g, '');
+        var code = $('#code').val();
+
+        if (!!realName && !!idCard) {
+            Submit.addClass('weui-btn_disabled');
+            loading = weui.loading('查询中...');
+            Ticket.hide();
+
+
+            var data = {
+                province_code: provinceCode,
+                id_type_code: IDTypeCode,
+                real_name: realName,
+                id_card: idCard,
+                code: code
+            };
+
+            // 提交查询信息
+            $.ajax({
+                type: 'POST',
+                url: '/get_ticket',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if(res.msg){weui.alert(res.msg)}
+                    if (res.status === 400) {
+                        update_code();
+                    } else if (res.status === 200) {
+                        $('#codeDiv').hide();
+                    }
+
+                    if (res.status !== 400) {
+                        if (res.ticket){
+                            Ticket.show();
+                            Ticket.text(res.ticket);
+                            $("#ticketText").text(res.ticket)
+                        }
+                    }
+                },
+
+                complete: function () {
+                    loading.hide();
+                    Submit.removeClass('weui-btn_disabled');
+                },
+            });
+
+        }
+        else {
+            weui.alert('请输入完整信息');
+
+        }
+
+
+    });
+
+</script>
+
+</body>
+
+</html>
+

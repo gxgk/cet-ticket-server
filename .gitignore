@@ -1,0 +1,6 @@
+.idea
+.DS_Store
+__pycache__
+logs/
+data_file/
+yzm.gif
