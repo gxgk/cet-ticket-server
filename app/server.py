@@ -99,7 +99,6 @@ class CetTicket():
             # 其他问题
             result = {"msg": msg, "status": 200}
             self.threshold = 5
-        print(result)
         return result
 
     def _get_report(self, sid):
