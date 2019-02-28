@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+from tornado.gen import coroutine
 from tornado.web import RequestHandler
+from tornado.concurrent import run_on_executor
 from app import cet_ticket
 
 from app.handlers.base import BaseHandler
@@ -17,14 +19,16 @@ class Index(RequestHandler):
 class GetTicket(BaseHandler):
     ''' 获取准考号 '''
 
-    async def async_get_ticket(self):
+    @run_on_executor
+    def async_get_ticket(self):
         result = self.get_data(self.data['id_card'])
         if not result:
             result = cet_ticket.get_ticket(**self.data)
         return result
 
-    async def post(self):
-        self.result = await self.async_get_ticket()
+    @coroutine
+    def post(self):
+        self.result = yield self.async_get_ticket()
         self.write_json(self.result)
 
     def on_finish(self):
