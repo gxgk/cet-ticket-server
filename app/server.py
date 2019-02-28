@@ -85,10 +85,13 @@ class CetTicket():
             result = {"ticket": ticket, "status": 200}
             self.threshold = 5
 
-        elif msg in ['验证码已超时失效，请重新输入。', '验证码错误', 'SQL语句存在风险，禁止执行！']:
+        elif msg in ['验证码已超时失效，请重新输入。', '验证码错误', 'SQL语句存在风险，禁止执行！',
+                     'Object reference not set to an instance of an object.']:
             # 验证码问题
             if msg == 'SQL语句存在风险，禁止执行！':
                 msg = '参数有误'
+            elif msg == 'Object reference not set to an instance of an object.':
+                msg = '请输入验证码'
             elif self.code and self.threshold == 0 or msg == '验证码已超时失效，请重新输入。':
                 del_file(img_file)
                 self.threshold = 5
@@ -97,7 +100,7 @@ class CetTicket():
             result = {"msg": msg, "status": 400}
         else:
             # 其他问题
-            result = {"msg": msg, "status": 200}
+            result = {"msg": msg, "status": 201}
             self.threshold = 5
         return result
 

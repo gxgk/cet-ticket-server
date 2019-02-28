@@ -213,11 +213,8 @@
                     }
                     if (res.status === 400) {
                         update_code();
-                    } else if (res.status === 200) {
+                    } else {
                         $('#codeDiv').hide();
-                    }
-
-                    if (res.status !== 400) {
                         if (res.ticket) {
                             Ticket.show();
                             Ticket.text(res.ticket);
