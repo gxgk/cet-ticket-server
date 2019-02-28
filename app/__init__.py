@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-import os
-from redis import Redis
+from redis import StrictRedis
+from app.settings import REDIS_URL
 
-
-REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
-redis = Redis(host=REDIS_HOST)
+redis = StrictRedis.from_url(REDIS_URL)
 
 from app.server import CetTicket
 
