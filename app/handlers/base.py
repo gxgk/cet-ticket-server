@@ -4,14 +4,12 @@ import pickle
 from app import redis
 from app.utils import get_cache, set_cache
 
-from concurrent.futures import ThreadPoolExecutor
 from raven.contrib.tornado import SentryMixin
 from tornado.web import RequestHandler
 from tornado.escape import json_decode
 
 
 class BaseHandler(SentryMixin, RequestHandler):
-    executor = ThreadPoolExecutor(5)
 
     def __init__(self, application, request, **kwargs):
         super(BaseHandler, self).__init__(application, request, **kwargs)

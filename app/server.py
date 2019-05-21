@@ -43,7 +43,7 @@ class CetTicket():
         data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code": 44}
 
         while True:
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
             result = await self.get_ticket(**data)
             print("update", result)
 
