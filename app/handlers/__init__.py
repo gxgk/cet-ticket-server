@@ -11,24 +11,22 @@ from app.settings import logger
 
 class Index(RequestHandler):
 
-    def get(self):
-        code = cet_ticket.get_code()
+    async def get(self):
+        code = await cet_ticket.get_code()
         self.render('index.html', code=code)
 
 
 class GetTicket(BaseHandler):
     ''' 获取准考号 '''
 
-    @run_on_executor
-    def async_get_ticket(self):
+    async def async_get_ticket(self):
         result = self.get_data(self.data['id_card'])
         if not result:
-            result = cet_ticket.get_ticket(**self.data)
+            result = await cet_ticket.get_ticket(**self.data)
         return result
 
-    @coroutine
-    def post(self):
-        self.result = yield self.async_get_ticket()
+    async def post(self):
+        self.result = await self.async_get_ticket()
         self.write_json(self.result)
 
     def on_finish(self):

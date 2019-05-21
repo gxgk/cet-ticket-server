@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 import os
 import time
-import requests
+import pickle
+import asyncio
+import requests_async
 import zipfile
 import json
 from app.parse_pdf import parse_pdf
 from app.utils import del_file
 from threading import Thread
 
+from app import redis
+
 img_file = 'static/yzm.gif'
-# 运行程序时，删除文件
-del_file(img_file)
 
 
 class CetTicket():
-    threshold = 5 # 更换验证码的阙值
     code = None
+    threshold = 5  # 更换验证码的阙值
     url = "http://cet-bm.neea.edu.cn/"
-    _http = requests.session()
+    _http = requests_async.Session()
 
     def __init__(self):
         ''' 创建一个请求 '''
@@ -30,79 +32,40 @@ class CetTicket():
             'Referer': self.url
         })
 
-        # 开启心跳，用于保持会话有效
-        t = Thread(target=self.heartbeat)
-        t.start()
+    #     pid = os.fork()
+    #     if pid == 0:
+    #         self.start_heartbeat()
+    #
+    # def start_heartbeat(self):
+    #     # IOLoop.instance().run_sync(self.heartbeat)
+    #
+    #     loop = asyncio.new_event_loop()  # 或 loop = asyncio.SelectorEventLoop()
+    #     loop.run_until_complete(self._heartbeat())
+    #     loop.close()
+    #
+    # async def _heartbeat(self):
+    #     while True:
+    #         await asyncio.sleep(2)
+    #         await self._keep_session()
+    #
+    # async def _keep_session(self):
+    #     ''' 更新会话 '''
+    #     data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code": 44}
+    #     result = await self.get_ticket(**data)
+    #     print("update", result)
+    #     return result
 
-    def heartbeat(self):
-        ''' 保持会话长期有效 '''
-        while True:
-            time.sleep(60)
-            try:
-                self.update_session(self.code)
-            except:
-                time.sleep(5)
-                self.update_session(self.code)
+    def save_session(self):
+        cookie = self._http.cookies.get_dict()
+        redis.set("session", pickle.dumps({"yzm_code": self.code, "cookie": cookie}))
 
+    async def load_session(self):
+        cache_data = redis.get("session")
+        if cache_data:
+            cache_data = pickle.loads(cache_data)
 
-    def get_code(self):
-        if not os.path.exists(img_file):
-            res = self._http.get(self.url + "/Home/VerifyCodeImg")
-            with open(img_file, 'wb') as f:
-                f.write(res.content)
-
-        return self.code
-
-    def update_session(self, code=None):
-        ''' 更新会话 '''
-        if code and not self.code:
-            self.code = code
-        data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code":44}
-        result = self.get_ticket(**data)
-        return result
-
-    def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
-        ''' 获取考号 '''
-
-        if not self.code:
-            self.threshold -= 1
-            self.code = code
-
-        data = {
-            "provinceCode": province_code,
-            "IDTypeCode": id_type_code,
-            "IDNumber": id_card,
-            "Name": real_name,
-            "verificationCode": self.code
-        }
-        res = self._http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data)
-        msg = res.json()['Message']
-        if msg[:7] == '[{"SID"':
-            # 获取考号
-            msg = json.loads(msg)[0]
-            sid = msg["SID"]
-            ticket = self._get_report(sid)
-            result = {"ticket": ticket, "status": 200}
-            self.threshold = 5
-
-        elif msg in ['验证码已超时失效，请重新输入。', '验证码错误', 'SQL语句存在风险，禁止执行！',
-                     'Object reference not set to an instance of an object.']:
-            # 验证码问题
-            if msg == 'SQL语句存在风险，禁止执行！':
-                msg = '参数有误'
-            elif msg == 'Object reference not set to an instance of an object.':
-                msg = '请输入验证码'
-            elif self.code and self.threshold == 0 or msg == '验证码已超时失效，请重新输入。':
-                del_file(img_file)
-                self.threshold = 5
-                self.get_code()
-            self.code = None
-            result = {"msg": msg, "status": 400}
-        else:
-            # 其他问题
-            result = {"msg": msg, "status": 201}
-            self.threshold = 5
-        return result
+            self.code = cache_data["yzm_code"]
+            self._http.cookies.update(cache_data['cookie'])
 
     def _get_report(self, sid):
         ''' 解析准考证文件 pdf，提取准考证号码 '''
@@ -119,3 +82,62 @@ class CetTicket():
                     f.write(data)
                     os.remove(sid)
                 return parse_pdf(pdf_file)
+
+    async def get_code(self):
+        await self.load_session()
+        if not os.path.exists(img_file):
+            res = await self._http.get(self.url + "/Home/VerifyCodeImg")
+            with open(img_file, 'wb') as f:
+                f.write(res.content)
+
+        return self.code
+
+    async def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
+
+        ''' 获取考号 '''
+        if not self.code:
+            self.threshold -= 1
+            self.code = code
+
+        data = {
+            "provinceCode": province_code,
+            "IDTypeCode": id_type_code,
+            "IDNumber": id_card,
+            "Name": real_name,
+            "verificationCode": self.code
+        }
+        res = await self._http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data)
+        msg = res.json()['Message']
+
+        if msg[:7] == '[{"SID"':
+            # 获取考号
+            msg = json.loads(msg)[0]
+            sid = msg["SID"]
+            if sid:
+                ticket = self._get_report(sid)
+                result = {"ticket": ticket, "status": 200}
+                self.threshold = 5
+            else:
+                result = {"msg": msg['Memo'], "status": 400}
+
+        elif msg in ['验证码已超时失效，请重新输入。', '验证码错误', 'SQL语句存在风险，禁止执行！',
+                     'Object reference not set to an instance of an object.']:
+            # 验证码问题
+            if msg == 'SQL语句存在风险，禁止执行！':
+                msg = '参数有误'
+            elif msg == 'Object reference not set to an instance of an object.':
+                msg = '请输入验证码'
+            elif self.code and self.threshold == 0 or msg == '验证码已超时失效，请重新输入。':
+                del_file(img_file)
+                self.threshold = 5
+                await self.get_code()
+            self.code = None
+            result = {"msg": msg, "status": 400}
+        else:
+            # 其他问题
+            result = {"msg": msg, "status": 201}
+            self.threshold = 5
+
+        self.save_session()
+
+        return result
