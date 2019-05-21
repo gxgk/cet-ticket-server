@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 import time
-import pickle
 import asyncio
 import requests_async
 import zipfile
 import json
 from app.parse_pdf import parse_pdf
-from app.utils import del_file
+from app.utils import del_file, get_cache, set_cache
 from threading import Thread
-
-from app import redis
 
 img_file = 'static/yzm.gif'
 
@@ -32,38 +29,31 @@ class CetTicket():
             'Referer': self.url
         })
 
-    #     pid = os.fork()
-    #     if pid == 0:
-    #         self.start_heartbeat()
-    #
-    # def start_heartbeat(self):
-    #     # IOLoop.instance().run_sync(self.heartbeat)
-    #
-    #     loop = asyncio.new_event_loop()  # 或 loop = asyncio.SelectorEventLoop()
-    #     loop.run_until_complete(self._heartbeat())
-    #     loop.close()
-    #
-    # async def _heartbeat(self):
-    #     while True:
-    #         await asyncio.sleep(2)
-    #         await self._keep_session()
-    #
-    # async def _keep_session(self):
-    #     ''' 更新会话 '''
-    #     data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code": 44}
-    #     result = await self.get_ticket(**data)
-    #     print("update", result)
-    #     return result
+        pid = os.fork()
+        if pid == 0:
+            self.start_heartbeat()
+
+    def start_heartbeat(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._keep_session())
+        loop.close()
+
+    async def _keep_session(self):
+        ''' 保持会话 '''
+        data = {'real_name': 'XXXXX', "id_card": "XXXXXX", "id_type_code": 1, "province_code": 44}
+
+        while True:
+            await asyncio.sleep(5)
+            result = await self.get_ticket(**data)
+            print("update", result)
 
     def save_session(self):
         cookie = self._http.cookies.get_dict()
-        redis.set("session", pickle.dumps({"yzm_code": self.code, "cookie": cookie}))
+        set_cache("session", {"yzm_code": self.code, "cookie": cookie})
 
     async def load_session(self):
-        cache_data = redis.get("session")
+        cache_data = get_cache("session")
         if cache_data:
-            cache_data = pickle.loads(cache_data)
-
             self.code = cache_data["yzm_code"]
             self._http.cookies.update(cache_data['cookie'])
 
@@ -93,6 +83,7 @@ class CetTicket():
         return self.code
 
     async def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
+        await self.load_session()
 
         ''' 获取考号 '''
         if not self.code:
