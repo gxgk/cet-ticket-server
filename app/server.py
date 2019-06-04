@@ -51,15 +51,15 @@ class CetTicket():
         cookie = self._http.cookies.get_dict()
         set_cache("session", {"yzm_code": self.code, "cookie": cookie})
 
-    async def load_session(self):
+    def load_session(self):
         cache_data = get_cache("session")
         if cache_data:
             self.code = cache_data["yzm_code"]
             self._http.cookies.update(cache_data['cookie'])
 
-    def _get_report(self, sid):
+    async def _get_report(self, sid):
         ''' 解析准考证文件 pdf，提取准考证号码 '''
-        res = self._http.get(f"{self.url}/Home/DownTestTicket?SID={sid}")
+        res = await self._http.get(f"{self.url}/Home/DownTestTicket?SID={sid}")
         with open(sid, "wb") as f:
             f.write(res.content)
 
@@ -74,7 +74,7 @@ class CetTicket():
                 return parse_pdf(pdf_file)
 
     async def get_code(self):
-        await self.load_session()
+        self.load_session()
         if not os.path.exists(img_file):
             res = await self._http.get(self.url + "/Home/VerifyCodeImg")
             with open(img_file, 'wb') as f:
@@ -83,7 +83,7 @@ class CetTicket():
         return self.code
 
     async def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
-        await self.load_session()
+        self.load_session()
 
         ''' 获取考号 '''
         if not self.code:
@@ -105,7 +105,7 @@ class CetTicket():
             msg = json.loads(msg)[0]
             sid = msg["SID"]
             if sid:
-                ticket = self._get_report(sid)
+                ticket = await self._get_report(sid)
                 result = {"ticket": ticket, "status": 200}
                 self.threshold = 5
             else:
