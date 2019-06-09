@@ -5,14 +5,12 @@ import logging
 
 DSN = os.environ.get('DSN')
 DEBUG = os.environ.get('DEBUG', False)
-REDIS_URL = os.environ.get('REDIS_URL', "redis://:@localhost:6379/0")
 
 application_settings = {
     'debug': DEBUG,
     'template_path': 'templates',
     'static_path': 'static'
 }
-
 
 # 开发时的日志配置，INFO 及以上级别的日志输出到 console。
 LOGGING = {
@@ -52,3 +50,10 @@ LOGGING = {
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger('root')
+
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PWD = os.environ.get('REDIS_PWD', '')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_CHANNEL = os.environ.get('REDIS_CHANNEL', 0)
+
+REDIS_URL = 'redis://:{}@{}:{}/{}'.format(REDIS_PWD, REDIS_HOST, REDIS_PORT, REDIS_CHANNEL)

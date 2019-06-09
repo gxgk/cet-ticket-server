@@ -6,6 +6,9 @@ services:
     command: python serve.py -log_file_prefix=logs/server.log
     environment:
       - REDIS_HOST=redis
+      - REDIS_PWD=
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=0
     ports:
       - "55551:8888"
     volumes:
