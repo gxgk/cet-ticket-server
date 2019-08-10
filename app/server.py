@@ -1,34 +1,24 @@
 # -*- coding: utf-8 -*-
 import os
-import time
 import asyncio
-import requests_async
+import httpx
 import zipfile
 import json
 from app.parse_pdf import parse_pdf
 from app.utils import del_file, get_cache, set_cache
-from threading import Thread
 
 img_file = 'static/yzm.gif'
+
+_http = httpx.AsyncClient()
 
 
 class CetTicket():
     code = None
     threshold = 5  # 更换验证码的阙值
     url = "http://cet-bm.neea.edu.cn/"
-    _http = requests_async.Session()
 
     def __init__(self):
         ''' 创建一个请求 '''
-        self._http.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/62.0.3202.89 Safari/537.36',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Referer': self.url
-        })
-
         pid = os.fork()
         if pid == 0:
             self.start_heartbeat()
@@ -44,22 +34,24 @@ class CetTicket():
 
         while True:
             await asyncio.sleep(10)
-            result = await self.get_ticket(**data)
-            print("update", result)
+            result = await self.get_ticket(**data, refresh_session=False)
 
     def save_session(self):
-        cookie = self._http.cookies.get_dict()
+        cookie = dict(_http.cookies)
         set_cache("session", {"yzm_code": self.code, "cookie": cookie})
 
-    def load_session(self):
+    def get_cookies(self):
         cache_data = get_cache("session")
+        cookies = httpx.Cookies()
         if cache_data:
             self.code = cache_data["yzm_code"]
-            self._http.cookies.update(cache_data['cookie'])
+            for index in cache_data["cookie"]:
+                cookies.set(index, cache_data["cookie"][index])
+        return cookies
 
     async def _get_report(self, sid):
         ''' 解析准考证文件 pdf，提取准考证号码 '''
-        res = await self._http.get(f"{self.url}/Home/DownTestTicket?SID={sid}")
+        res = await _http.get(f"{self.url}/Home/DownTestTicket?SID={sid}")
         with open(sid, "wb") as f:
             f.write(res.content)
 
@@ -74,16 +66,16 @@ class CetTicket():
                 return parse_pdf(pdf_file)
 
     async def get_code(self):
-        self.load_session()
+        cookies = self.get_cookies()
         if not os.path.exists(img_file):
-            res = await self._http.get(self.url + "/Home/VerifyCodeImg")
+            res = await _http.get(self.url + "/Home/VerifyCodeImg", cookies=cookies)
             with open(img_file, 'wb') as f:
                 f.write(res.content)
 
         return self.code
 
-    async def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None):
-        self.load_session()
+    async def get_ticket(self, real_name, id_card, province_code, id_type_code, code=None, refresh_session=True):
+        cookies = self.get_cookies()
 
         ''' 获取考号 '''
         if not self.code:
@@ -97,7 +89,7 @@ class CetTicket():
             "Name": real_name,
             "verificationCode": self.code
         }
-        res = await self._http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data)
+        res = await _http.post(self.url + "/Home/ToQuickPrintTestTicket", data=data, cookies=cookies)
         msg = res.json()['Message']
 
         if msg[:7] == '[{"SID"':
@@ -128,7 +120,7 @@ class CetTicket():
             # 其他问题
             result = {"msg": msg, "status": 201}
             self.threshold = 5
-
-        self.save_session()
+        if refresh_session:
+            self.save_session()
 
         return result
