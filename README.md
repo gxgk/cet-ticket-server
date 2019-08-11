@@ -10,5 +10,5 @@ python serve.py # 映射端口为 8888
 
 ## docker部署运行
 ```bash
-docker-compose up --scale app=3 -d # 映射端口为 50001
+docker-compose up --scale app=3 -d # 映射端口为 50000
 ```
